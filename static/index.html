@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Personal RAG</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 700px; margin: 40px auto; }
+    textarea, input[type=file] { width: 100%; margin: 8px 0; }
+    #answer { white-space: pre-wrap; background: #f4f4f4; padding: 12px; border-radius: 6px; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <h1>📄 Personal RAG</h1>
+
+  <h3>1. Upload a PDF</h3>
+  <input type="file" id="fileInput" accept="application/pdf" />
+  <button onclick="upload()">Upload &amp; Index</button>
+  <div id="uploadStatus"></div>
+
+  <h3>2. Ask a question</h3>
+  <textarea id="question" rows="3" placeholder="What does the document say about...?"></textarea>
+  <button onclick="ask()">Ask</button>
+  <div id="answer"></div>
+
+  <script>
+    const API = "http://localhost:8080";
+
+    async function upload() {
+      const fileInput = document.getElementById("fileInput");
+      if (!fileInput.files.length) return alert("Choose a PDF first");
+
+      const formData = new FormData();
+      formData.append("file", fileInput.files[0]);
+
+      document.getElementById("uploadStatus").textContent = "Indexing...";
+      const res = await fetch(`${API}/api/upload`, { method: "POST", body: formData });
+      const data = await res.json();
+      document.getElementById("uploadStatus").textContent =
+        res.ok ? `Indexed ${data.chunksIndexed} chunks from ${data.file}` : `Error: ${data.error || res.statusText}`;
+    }
+
+    async function ask() {
+      const question = document.getElementById("question").value.trim();
+      if (!question) return;
+
+      document.getElementById("answer").textContent = "Thinking...";
+      const res = await fetch(`${API}/api/query`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question }),
+      });
+      const data = await res.json();
+      document.getElementById("answer").textContent = res.ok ? data.answer : `Error: ${data.error || res.statusText}`;
+    }
+  </script>
+</body>
+</html>
